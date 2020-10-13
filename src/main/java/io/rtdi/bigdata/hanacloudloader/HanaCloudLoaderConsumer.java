@@ -24,7 +24,7 @@ public class HanaCloudLoaderConsumer extends Consumer<HanaCloudLoaderConnectionP
 	}
 
 	@Override
-	public void process(TopicName topic, long offset, int partition, JexlRecord keyRecord, JexlRecord valueRecord) throws IOException {
+	public void process(TopicName topic, long offset, long offsettimestamp, int partition, JexlRecord keyRecord, JexlRecord valueRecord) throws IOException {
 		RowType rowtype = ValueSchema.getChangeType(valueRecord);
 		if (rowtype == null) {
 			rowtype = RowType.UPSERT;

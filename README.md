@@ -1,19 +1,20 @@
-# RTDI Big Data HanaCloudConnector 
+# Hana Cloud Loader 
 
 _Load data from Kafka topics based on their (nested) schema into a relational model of Hana Cloud_
 
-Source code available here: [github](https://github.com/rtdi/RTDIHanaCloudConnector)
+Source code available here: [github](https://github.com/rtdi/HanaCloudLoader)
+Docker image here: [dockerhub](https://hub.docker.com/r/rtdi/hanacloudloader)
 
 
 ## Installation and testing
 
 On any computer install the Docker Daemon - if it is not already - and download this docker image with
 
-    docker pull rtdi/s4hanaconnector
+    docker pull rtdi/hanacloudloader
 
 Then start the image via docker run. For a quick test this command is sufficient
 
-    docker run -d -p 80:8080 --rm --name hanacloudconnector  rtdi/hanacloudconnector
+    docker run -d -p 80:8080 --rm --name hanacloudloader  rtdi/hanacloudloader
 
 to expose a webserver at port 80 on the host running the container. Make sure to open the web page via the http prefix, as https needs more configuration.
 For example [http://localhost:80/](http://localhost:80/) might do the trick of the container is hosted on the same computer.
@@ -23,7 +24,7 @@ The default login for this startup method is: **rtdi / rtdi!io**
 The probably better start command is to mount two host directories into the container. In this example the host's /data/files contains all files to be loaded into Kafka and the /data/config is an (initially) empty directory where all settings made when configuring the connector will be stored permanently.
 
     docker run -d -p 80:8080 --rm -v /data/files:/data/ -v /data/config:/usr/local/tomcat/conf/security \
-        --name hanacloudconnector  rtdi/hanacloudconnector
+        --name hanacloudloader  rtdi/hanacloudloader
 
 
 For proper start commands, especially https and security related, see the [ConnectorRootApp](https://github.com/rtdi/ConnectorRootApp) project, this application is based on.
@@ -34,7 +35,7 @@ For proper start commands, especially https and security related, see the [Conne
 
 The first step is to connect the application to a Kafka server, in this example Confluent Cloud.
 
-<img src="https://github.com/rtdi/RTDIHanaCloudConnector/raw/master/docs/media/RTDIHanaCloudConnector-PipelineConfig.png" width="50%">
+<img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-PipelineConfig.png" width="50%">
 
 
 ### Define a Connection
@@ -44,12 +45,13 @@ The database user should be a new user which has the permission to create new ta
 
 Clicking on the Add icon allows opens the setting dialog
 
-<img src="https://github.com/rtdi/S4HanaConnector/raw/master/docs/media/RTDIHanaCloudConnector-connectionadd.png" width="50%">
+<img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-connectionadd.png" width="50%">
 
-The JDBCURL for a Hana database is usually in the format jdbc:sap://<hostname>:3<instance number>15/<database container>, e.g. jdbc:sap://dbhost:39015/HXE.
-The source database schema is the Hana schema name where all SAP tables can be found.
+The endpoint for a SAP Hana Cloud instance is found in the SCP Cockpit, like here:
+<img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-endpoint.png" width="50%">
 
-<img src="https://github.com/rtdi/S4HanaConnector/raw/master/docs/media/RTDIHanaCloudConnector-connectiondefine.png" width="50%">
+
+<img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-connectiondefine.png" width="50%">
 
 
 ### Define the consumer

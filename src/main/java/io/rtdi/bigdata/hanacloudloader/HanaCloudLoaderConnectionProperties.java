@@ -4,21 +4,30 @@ import io.rtdi.bigdata.connector.properties.ConnectionProperties;
 
 public class HanaCloudLoaderConnectionProperties extends ConnectionProperties {
 
-	private static final String JDBCURL = "s4hana.jdbcurl";
-	private static final String USERNAME = "s4hana.username";
-	private static final String PASSWORD = "s4hana.password";
-	private static final String TARGETSCHEMA = "s4hana.targetschema";
+	private static final String ENDPOINT = "hanacloud.endpoint";
+	private static final String USERNAME = "hanacloud.username";
+	private static final String PASSWORD = "hanacloud.password";
+	private static final String TARGETSCHEMA = "hanacloud.targetschema";
 
 	public HanaCloudLoaderConnectionProperties(String name) {
 		super(name);
-		properties.addStringProperty(JDBCURL, "JDBC URL", "The JDBC URL to use for connecting to the Hana system", "sap-icon://target-group", "jdbc:sap://localhost:3xx15/yy", true);
+		properties.addStringProperty(ENDPOINT, "Endpoint (Host)", "The Hana Cloud Endpoint", "sap-icon://target-group", "<id>.hana.hanacloud.ondemand.com:443", true);
 		properties.addStringProperty(USERNAME, "Username", "Hana database username", "sap-icon://target-group", null, true);
 		properties.addPasswordProperty(PASSWORD, "Password", "Password", "sap-icon://target-group", null, true);
-		properties.addStringProperty(TARGETSCHEMA, "Target database schema", "Database schema the target tables should be created in", "sap-icon://target-group", null, true);
+		properties.addStringProperty(TARGETSCHEMA, "Target database schema", "Database schema the target tables should be created in", "sap-icon://target-group", null, false);
 	}
 
 	public String getJDBCURL() {
-		return properties.getStringPropertyValue(JDBCURL);
+		String endpoint = getEndpoint();
+		return "jdbc:sap://" + endpoint + "/?encrypt=true&validateCertificate=false";
+	}
+	
+	public String getEndpoint() {
+		String endpoint = properties.getStringPropertyValue(ENDPOINT);
+		if (!endpoint.contains(":")) {
+			endpoint = endpoint + ":443";
+		}
+		return endpoint;
 	}
 	
 	public String getUsername() {
@@ -30,6 +39,11 @@ public class HanaCloudLoaderConnectionProperties extends ConnectionProperties {
 	}
 	
 	public String getTargetSchema() {
-		return properties.getStringPropertyValue(TARGETSCHEMA);
+		String schema = properties.getStringPropertyValue(TARGETSCHEMA);
+		if (schema == null) {
+			return getUsername();
+		} else {
+			return schema;
+		}
 	}
 }

@@ -48,8 +48,10 @@ Clicking on the Add icon allows opens the setting dialog
 <img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-connectionadd.png" width="50%">
 
 The endpoint for a SAP Hana Cloud instance is found in the SCP Cockpit, like here:
-<img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-endpoint.png" width="50%">
 
+<img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-endpoint.png" width="25%">
+
+This is used in the Endpoint setting of the Connection.
 
 <img src="https://github.com/rtdi/HanaCloudLoader/raw/master/docs/media/HanaCloudLoader-connectiondefine.png" width="50%">
 

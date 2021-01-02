@@ -1,5 +1,6 @@
 package io.rtdi.bigdata.hanacloudloader;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -10,15 +11,16 @@ import java.util.Map;
 import org.apache.avro.Schema.Field;
 
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
+import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorRuntimeException;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.JexlGenericData.JexlRecord;
 import io.rtdi.bigdata.connector.pipeline.foundation.enums.RowType;
 
 public class HanaWriterUpsert extends HanaRootTableStatement {
-	private Map<String, String> childtablesqls;
-	private Map<String, String> childtabledeletesqls;
-	private String upsertsql;
+	private Map<String, PreparedStatement> childtablesqls;
+	private Map<String, PreparedStatement> childtabledeletesqls;
+	private PreparedStatement upsertsql;
 	
-	public HanaWriterUpsert(HanaRootTable writer) throws ConnectorCallerException {
+	public HanaWriterUpsert(HanaRootTable writer, Connection conn) throws ConnectorCallerException {
 		super(writer);
 		StringBuffer sqltext = new StringBuffer();
 		StringBuffer sqlparamlist = new StringBuffer();
@@ -40,30 +42,38 @@ public class HanaWriterUpsert extends HanaRootTableStatement {
 		sqltext.append(")");
 		sqltext.append(" with primary key");
 		
-		upsertsql = sqltext.toString();
-		createChildSQLs();
+		try {
+			upsertsql = conn.prepareStatement(sqltext.toString());
+			createChildSQLs(conn);
+		} catch (SQLException e) {
+			throw new ConnectorCallerException(
+					"Cannot create the SQL statements",
+					e,
+					"Execute the SQL manually to validate",
+					null);
+		}
 	}
 	
 	@Override
 	protected void execute(JexlRecord record, Connection conn) throws ConnectorCallerException {
 		if (record != null) {
-			deletechilddata(record, conn);
-			upsertdata(record, conn);
-			loadchilddata(record, conn, writer);
+			deletechilddata(record);
+			upsertdata(record);
+			loadchilddata(record, writer);
 		}
 	}
 	
-	private void loadchilddata(JexlRecord record, Connection conn, HanaTable recordwriter) throws ConnectorCallerException {
+	private void loadchilddata(JexlRecord record, HanaTable recordwriter) throws ConnectorCallerException {
 		if (recordwriter.getArrayFields() != null) {
 			for (Field field : recordwriter.getArrayFields().keySet()) {
 				HanaTable fieldwriter = recordwriter.getChildTable(field);
 				HanaArrayColumn arraycolumn = recordwriter.getArrayFields().get(field);
 				String schemaname = arraycolumn.getSchemaName();
-				String sql = childtablesqls.get(schemaname);
+				PreparedStatement stmt = childtablesqls.get(schemaname);
 				@SuppressWarnings("unchecked")
 				List<JexlRecord> l = (List<JexlRecord>) arraycolumn.getValue(record);
 				if (l != null && l.size() != 0) {
-					try (PreparedStatement stmt = conn.prepareStatement(sql); ) {
+					try {
 						for (JexlRecord r : l) {
 							int pos = 1;
 							for (HanaColumn col : fieldwriter.getColumns()) {
@@ -71,55 +81,55 @@ public class HanaWriterUpsert extends HanaRootTableStatement {
 								stmt.setObject(pos, value);
 								pos++;
 							}
-							stmt.execute();
-							loadchilddata(r, conn, fieldwriter);
+							stmt.addBatch();
+							loadchilddata(r, fieldwriter);
 						}
 					} catch (SQLException e) {
 						throw new ConnectorCallerException(
 								"Cannot execute the insert statement into a child table",
 								e,
 								"Execute the SQL manually to validate",
-								sql);
+								stmt.toString());
 					}
 				}
 			}
 		}
 	}
 
-	private void upsertdata(JexlRecord record, Connection conn) throws ConnectorCallerException {
-		try (PreparedStatement stmt = conn.prepareStatement(upsertsql); ) {
+	private void upsertdata(JexlRecord record) throws ConnectorCallerException {
+		try {
 			int pos = 1;
 			for (HanaColumn col : getWriter().getColumns()) {
 				Object value = col.getValue(record);
-				stmt.setObject(pos, value);
+				upsertsql.setObject(pos, value);
 				pos++;
 			}
-			stmt.execute();
+			upsertsql.addBatch();
 		} catch (SQLException e) {
 			throw new ConnectorCallerException(
 					"Cannot execute the upsert statement",
 					e,
 					"Execute the SQL manually to validate",
-					upsertsql);
+					upsertsql.toString());
 		}
 	}
 
-	private void deletechilddata(JexlRecord record, Connection conn) throws ConnectorCallerException {
-		for (String sql : childtabledeletesqls.values()) {
-			try (PreparedStatement stmt = conn.prepareStatement(sql); ) {
+	private void deletechilddata(JexlRecord record) throws ConnectorCallerException {
+		for (PreparedStatement stmt : childtabledeletesqls.values()) {
+			try {
 				int pos = 1;
 				for (HanaColumn col : writer.getPrimaryKeys()) {
 					Object value = col.getValue(record);
 					stmt.setObject(pos, value);
 					pos++;
 				}
-				stmt.execute();
+				stmt.addBatch();
 			} catch (SQLException e) {
 				throw new ConnectorCallerException(
 						"Cannot execute the upsert statement",
 						e,
 						"Execute the SQL manually to validate",
-						sql);
+						stmt.toString());
 			}
 		}
 	}
@@ -129,7 +139,7 @@ public class HanaWriterUpsert extends HanaRootTableStatement {
 		return RowType.UPSERT;
 	}
 
-	private void createChildSQLs() {
+	private void createChildSQLs(Connection conn) throws SQLException {
 		childtablesqls = new HashMap<>();
 		childtabledeletesqls = new HashMap<>();
 		for (String name : writer.getAllChildTables().keySet()) {
@@ -152,7 +162,7 @@ public class HanaWriterUpsert extends HanaRootTableStatement {
 			sqltext.append(") values (");
 			sqltext.append(sqlparamlist);
 			sqltext.append(")");
-			childtablesqls.put(name, sqltext.toString());
+			childtablesqls.put(name, conn.prepareStatement(sqltext.toString()));
 			
 			sqltext = new StringBuffer();
 			projection = new StringBuffer();
@@ -166,13 +176,32 @@ public class HanaWriterUpsert extends HanaRootTableStatement {
 				projection.append("\"").append(pk.getColumnName()).append("\" = ?");
 			}
 			sqltext.append(projection);
-			childtabledeletesqls.put(name, sqltext.toString());
+			childtabledeletesqls.put(name, conn.prepareStatement(sqltext.toString()));
 		}
 	}
 	
 	@Override
 	public String toString() {
-		return upsertsql;
+		return "upsert";
+	}
+
+	@Override
+	protected void executeBatch() throws IOException {
+		try {
+			upsertsql.executeBatch();
+			for (PreparedStatement stmt : childtabledeletesqls.values()) {
+				stmt.executeBatch();
+			}
+			for (PreparedStatement stmt : childtablesqls.values()) {
+				stmt.executeBatch();
+			}
+		} catch (SQLException e) {
+			throw new ConnectorRuntimeException(
+					"Failed when running the executeBatch() command to update the target tables",
+					e,
+					null,
+					null);
+		}
 	}
 
 }

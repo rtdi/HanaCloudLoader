@@ -1,5 +1,6 @@
 package io.rtdi.bigdata.hanacloudloader;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -108,12 +109,16 @@ public class HanaWriterTruncate extends HanaRootTableStatement {
 
 	@Override
 	protected RowType getRowType() {
-		return RowType.DELETE;
+		return RowType.TRUNCATE;
 	}
 	
 	@Override
 	public String toString() {
 		return "truncate table";
+	}
+
+	@Override
+	protected void executeBatch() throws IOException {
 	}
 
 }

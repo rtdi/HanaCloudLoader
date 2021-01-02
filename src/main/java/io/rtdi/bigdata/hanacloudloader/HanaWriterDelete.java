@@ -1,5 +1,6 @@
 package io.rtdi.bigdata.hanacloudloader;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -7,14 +8,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
+import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorRuntimeException;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.JexlGenericData.JexlRecord;
 import io.rtdi.bigdata.connector.pipeline.foundation.enums.RowType;
 
 public class HanaWriterDelete extends HanaRootTableStatement {
-	private Map<String, String> childtabledeletesqls;
-	private String deletesql;
+	private Map<String, PreparedStatement> childtabledeletesqls;
+	private PreparedStatement deletesql;
 	
-	public HanaWriterDelete(HanaRootTable writer) throws ConnectorCallerException {
+	public HanaWriterDelete(HanaRootTable writer, Connection conn) throws ConnectorCallerException {
 		super(writer);
 		StringBuffer sqltext = new StringBuffer();
 		StringBuffer where = new StringBuffer();
@@ -29,8 +31,16 @@ public class HanaWriterDelete extends HanaRootTableStatement {
 		}
 		sqltext.append(where);
 
-		deletesql = sqltext.toString();
-		createChildSQLs();
+		try {
+			deletesql = conn.prepareStatement(sqltext.toString());
+			createChildSQLs(conn);
+		} catch (SQLException e) {
+			throw new ConnectorCallerException(
+					"Cannot create the SQL statements",
+					e,
+					"Execute the SQL manually to validate",
+					null);
+		}
 	}
 	
 	@Override
@@ -42,39 +52,39 @@ public class HanaWriterDelete extends HanaRootTableStatement {
 	}
 	
 	private void deletedata(JexlRecord record, Connection conn) throws ConnectorCallerException {
-		try (PreparedStatement stmt = conn.prepareStatement(deletesql); ) {
+		try {
 			int pos = 1;
 			for (HanaColumnPK col : writer.getPrimaryKeys()) {
 				Object value = col.getValue(record);
-				stmt.setObject(pos, value);
+				deletesql.setObject(pos, value);
 				pos++;
 			}
-			stmt.execute();
+			deletesql.addBatch();
 		} catch (SQLException e) {
 			throw new ConnectorCallerException(
 					"Cannot execute the delete statement",
 					e,
 					"Execute the SQL manually to validate",
-					deletesql);
+					deletesql.toString());
 		}
 	}
 
 	private void deletechilddata(JexlRecord record, Connection conn) throws ConnectorCallerException {
-		for (String sql : childtabledeletesqls.values()) {
-			try (PreparedStatement stmt = conn.prepareStatement(sql); ) {
+		for (PreparedStatement stmt : childtabledeletesqls.values()) {
+			try {
 				int pos = 1;
 				for (HanaColumn col : writer.getPrimaryKeys()) {
 					Object value = col.getValue(record);
 					stmt.setObject(pos, value);
 					pos++;
 				}
-				stmt.execute();
+				stmt.addBatch();
 			} catch (SQLException e) {
 				throw new ConnectorCallerException(
 						"Cannot execute the upsert statement",
 						e,
 						"Execute the SQL manually to validate",
-						sql);
+						stmt.toString());
 			}
 		}
 	}
@@ -84,7 +94,7 @@ public class HanaWriterDelete extends HanaRootTableStatement {
 		return RowType.DELETE;
 	}
 
-	private void createChildSQLs() {
+	private void createChildSQLs(Connection conn) throws SQLException {
 		childtabledeletesqls = new HashMap<>();
 		for (String name : writer.getAllChildTables().keySet()) {
 			HanaTable w = writer.getAllChildTables().get(name);
@@ -100,13 +110,29 @@ public class HanaWriterDelete extends HanaRootTableStatement {
 				projection.append("\"").append(pk.getColumnName()).append("\" = ?");
 			}
 			sqltext.append(projection);
-			childtabledeletesqls.put(name, sqltext.toString());
+			childtabledeletesqls.put(name, conn.prepareStatement(sqltext.toString()));
 		}
 	}
 	
 	@Override
 	public String toString() {
-		return deletesql;
+		return "delete";
+	}
+
+	@Override
+	protected void executeBatch() throws IOException {
+		try {
+			deletesql.executeBatch();
+			for (PreparedStatement stmt : childtabledeletesqls.values()) {
+				stmt.executeBatch();
+			}
+		} catch (SQLException e) {
+			throw new ConnectorRuntimeException(
+					"Failed when running the executeBatch() command to update the target tables",
+					e,
+					null,
+					null);
+		}
 	}
 
 }

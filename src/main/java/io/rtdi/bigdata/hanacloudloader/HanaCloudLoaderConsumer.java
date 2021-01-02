@@ -17,6 +17,7 @@ import io.rtdi.bigdata.connector.pipeline.foundation.recordbuilders.ValueSchema;
 public class HanaCloudLoaderConsumer extends Consumer<HanaCloudLoaderConnectionProperties, HanaCloudLoaderConsumerProperties> {
 	Connection conn = null;
 	private Map<Integer, HanaRootTable> schemawriters = new HashMap<>();
+	private Map<JexlRecord, JexlRecord> messages = new HashMap<>();
 
 	public HanaCloudLoaderConsumer(ConsumerInstanceController instance) throws IOException {
 		super(instance);
@@ -25,12 +26,10 @@ public class HanaCloudLoaderConsumer extends Consumer<HanaCloudLoaderConnectionP
 
 	@Override
 	public void process(TopicName topic, long offset, long offsettimestamp, int partition, JexlRecord keyRecord, JexlRecord valueRecord) throws IOException {
-		RowType rowtype = ValueSchema.getChangeType(valueRecord);
-		if (rowtype == null) {
-			rowtype = RowType.UPSERT;
-		}
-		HanaRootTable writer = getWriter(valueRecord);
-		writer.writeRecord(valueRecord, rowtype, conn);
+		/*
+		 * Collect all messages within a fetch and remove duplicates
+		 */
+		messages.put(keyRecord, valueRecord);
 	}
 
 	@Override
@@ -50,6 +49,19 @@ public class HanaCloudLoaderConsumer extends Consumer<HanaCloudLoaderConnectionP
 
 	@Override
 	public void fetchBatchEnd() throws IOException {
+		for (JexlRecord key : messages.keySet()) {
+			JexlRecord value = messages.get(key);
+			RowType rowtype = ValueSchema.getChangeType(value);
+			if (rowtype == null) {
+				rowtype = RowType.UPSERT;
+			}
+			HanaRootTable writer = getWriter(value);
+			writer.writeRecord(value, rowtype, conn);
+		}
+		for (HanaRootTable table : schemawriters.values()) {
+			table.executeBatch();
+		}
+		messages.clear();
 	}
 
 	@Override

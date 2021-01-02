@@ -1,5 +1,6 @@
 package io.rtdi.bigdata.hanacloudloader;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,7 +50,7 @@ public class HanaRootTable extends HanaTable {
 			switch (rowtype) {
 			case DELETE:
 			case EXTERMINATE:
-				writer = new HanaWriterDelete(this);
+				writer = new HanaWriterDelete(this, conn);
 				break;
 			case TRUNCATE:
 				writer = new HanaWriterTruncate(this);
@@ -58,12 +59,18 @@ public class HanaRootTable extends HanaTable {
 			case UPDATE:
 			case INSERT:
 			case UPSERT:
-				writer = new HanaWriterUpsert(this);
+				writer = new HanaWriterUpsert(this, conn);
 				break;
 			}
 			writerstatements.put(rowtype, writer);
 		}
 		writer.execute(record, conn);
+	}
+
+	public void executeBatch() throws IOException {
+		for (HanaRootTableStatement writer : writerstatements.values()) {
+			writer.executeBatch();
+		}
 	}
 
 }

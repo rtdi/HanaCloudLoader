@@ -1,5 +1,6 @@
 package io.rtdi.bigdata.hanacloudloader;
 
+import java.io.IOException;
 import java.sql.Connection;
 
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
@@ -21,5 +22,7 @@ public abstract class HanaRootTableStatement {
 	}
 
 	protected abstract void execute(JexlRecord record, Connection conn) throws ConnectorCallerException;
+
+	protected abstract void executeBatch() throws IOException;
 	
 }

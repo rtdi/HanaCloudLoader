@@ -13,7 +13,7 @@ import org.apache.avro.Schema.Field;
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorRuntimeException;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.JexlGenericData.JexlRecord;
-import io.rtdi.bigdata.connector.pipeline.foundation.enums.RowType;
+import io.rtdi.bigdata.kafka.avro.RowType;
 
 public class HanaWriterUpsert extends HanaRootTableStatement {
 	private Map<String, PreparedStatement> childtablesqls;

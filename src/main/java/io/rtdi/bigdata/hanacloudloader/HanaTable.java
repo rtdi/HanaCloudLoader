@@ -13,7 +13,7 @@ import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
-import io.rtdi.bigdata.connector.pipeline.foundation.recordbuilders.AvroField;
+import io.rtdi.bigdata.kafka.avro.recordbuilders.AvroField;
 import io.rtdi.bigdata.connector.pipeline.foundation.utils.IOUtils;
 
 /**

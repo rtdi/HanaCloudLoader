@@ -9,7 +9,7 @@ import java.util.Map;
 
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.JexlGenericData.JexlRecord;
-import io.rtdi.bigdata.connector.pipeline.foundation.enums.RowType;
+import io.rtdi.bigdata.kafka.avro.RowType;
 
 public class HanaWriterTruncate extends HanaRootTableStatement {
 	

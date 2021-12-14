@@ -10,9 +10,9 @@ import io.rtdi.bigdata.connector.connectorframework.Consumer;
 import io.rtdi.bigdata.connector.connectorframework.controller.ConsumerInstanceController;
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
 import io.rtdi.bigdata.connector.pipeline.foundation.TopicName;
+import io.rtdi.bigdata.connector.pipeline.foundation.avro.AvroUtils;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.JexlGenericData.JexlRecord;
-import io.rtdi.bigdata.connector.pipeline.foundation.enums.RowType;
-import io.rtdi.bigdata.connector.pipeline.foundation.recordbuilders.ValueSchema;
+import io.rtdi.bigdata.kafka.avro.RowType;
 
 public class HanaCloudLoaderConsumer extends Consumer<HanaCloudLoaderConnectionProperties, HanaCloudLoaderConsumerProperties> {
 	Connection conn = null;
@@ -51,7 +51,7 @@ public class HanaCloudLoaderConsumer extends Consumer<HanaCloudLoaderConnectionP
 	public void fetchBatchEnd() throws IOException {
 		for (JexlRecord key : messages.keySet()) {
 			JexlRecord value = messages.get(key);
-			RowType rowtype = ValueSchema.getChangeType(value);
+			RowType rowtype = AvroUtils.getChangeType(value);
 			if (rowtype == null) {
 				rowtype = RowType.UPSERT;
 			}

@@ -2,6 +2,8 @@ package io.rtdi.bigdata.hanacloudloader;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
 
@@ -9,12 +11,11 @@ import org.apache.avro.Schema.Field;
 
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.JexlGenericData.JexlRecord;
-import io.rtdi.bigdata.connector.pipeline.foundation.avrodatatypes.AvroDate;
-import io.rtdi.bigdata.connector.pipeline.foundation.avrodatatypes.AvroTimestamp;
-import io.rtdi.bigdata.connector.pipeline.foundation.avrodatatypes.AvroType;
-import io.rtdi.bigdata.connector.pipeline.foundation.avrodatatypes.IAvroDatatype;
-import io.rtdi.bigdata.connector.pipeline.foundation.exceptions.PipelineCallerException;
-import io.rtdi.bigdata.connector.pipeline.foundation.recordbuilders.AvroField;
+import io.rtdi.bigdata.kafka.avro.datatypes.AvroDate;
+import io.rtdi.bigdata.kafka.avro.datatypes.AvroTimestamp;
+import io.rtdi.bigdata.kafka.avro.datatypes.AvroType;
+import io.rtdi.bigdata.kafka.avro.datatypes.IAvroDatatype;
+import io.rtdi.bigdata.kafka.avro.recordbuilders.AvroField;
 
 public class HanaColumn {
 
@@ -92,78 +93,74 @@ public class HanaColumn {
 		if (value == null) {
 			return null;
 		}
-		try {
-			switch (avrotype.getAvroType()) {
-			case AVROANYPRIMITIVE:
-				break;
-			case AVROARRAY:
-				break;
-			case AVROBOOLEAN:
-				break;
-			case AVROBYTE:
-				break;
-			case AVROBYTES:
-				break;
-			case AVROCLOB:
-				break;
-			case AVRODATE: {
-				Instant date = ((AvroDate) avrotype).convertToJava(value);
-				return Date.from(date);
-			}
-			case AVRODECIMAL:
-				break;
-			case AVRODOUBLE:
-				break;
-			case AVROENUM:
-				break;
-			case AVROFIXED:
-				break;
-			case AVROFLOAT:
-				break;
-			case AVROINT:
-				break;
-			case AVROLONG:
-				break;
-			case AVROMAP:
-				break;
-			case AVRONCLOB:
-				break;
-			case AVRONVARCHAR:
-				break;
-			case AVRORECORD:
-				break;
-			case AVROSHORT:
-				break;
-			case AVROSTGEOMETRY:
-				break;
-			case AVROSTPOINT:
-				break;
-			case AVROSTRING:
-				break;
-			case AVROTIMEMICROS:
-				break;
-			case AVROTIMEMILLIS:
-				break;
-			case AVROTIMESTAMPMICROS:
-				break;
-			case AVROTIMESTAMPMILLIS: {
-				Instant utc = ((AvroTimestamp) avrotype).convertToJava(value);
-				Timestamp ts = Timestamp.from(utc);
-				return ts;
-			}
-			case AVROURI:
-				break;
-			case AVROUUID:
-				break;
-			case AVROVARCHAR:
-				break;
-			default:
-				break;
-			}
-			return avrotype.convertToJava(value);
-		} catch (PipelineCallerException e) {
-			throw new ConnectorCallerException(e.getMessage(), e.getCause(), e.getHint(), e.getCausingObject());
+		switch (avrotype.getAvroType()) {
+		case AVROANYPRIMITIVE:
+			break;
+		case AVROARRAY:
+			break;
+		case AVROBOOLEAN:
+			break;
+		case AVROBYTE:
+			break;
+		case AVROBYTES:
+			break;
+		case AVROCLOB:
+			break;
+		case AVRODATE: {
+			LocalDate date = ((AvroDate) avrotype).convertToJava(value);
+			return Date.from(date.atStartOfDay(ZoneOffset.UTC).toInstant());
 		}
+		case AVRODECIMAL:
+			break;
+		case AVRODOUBLE:
+			break;
+		case AVROENUM:
+			break;
+		case AVROFIXED:
+			break;
+		case AVROFLOAT:
+			break;
+		case AVROINT:
+			break;
+		case AVROLONG:
+			break;
+		case AVROMAP:
+			break;
+		case AVRONCLOB:
+			break;
+		case AVRONVARCHAR:
+			break;
+		case AVRORECORD:
+			break;
+		case AVROSHORT:
+			break;
+		case AVROSTGEOMETRY:
+			break;
+		case AVROSTPOINT:
+			break;
+		case AVROSTRING:
+			break;
+		case AVROTIMEMICROS:
+			break;
+		case AVROTIMEMILLIS:
+			break;
+		case AVROTIMESTAMPMICROS:
+			break;
+		case AVROTIMESTAMPMILLIS: {
+			Instant utc = ((AvroTimestamp) avrotype).convertToJava(value);
+			Timestamp ts = Timestamp.from(utc);
+			return ts;
+		}
+		case AVROURI:
+			break;
+		case AVROUUID:
+			break;
+		case AVROVARCHAR:
+			break;
+		default:
+			break;
+		}
+		return avrotype.convertToJava(value);
 	}
 	
 	@Override

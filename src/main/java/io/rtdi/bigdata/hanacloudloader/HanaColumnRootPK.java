@@ -5,7 +5,7 @@ import org.apache.avro.Schema.Field;
 import io.rtdi.bigdata.connector.connectorframework.exceptions.ConnectorCallerException;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.IAvroNested;
 import io.rtdi.bigdata.connector.pipeline.foundation.avro.JexlGenericData.JexlRecord;
-import io.rtdi.bigdata.connector.pipeline.foundation.recordbuilders.AvroField;
+import io.rtdi.bigdata.kafka.avro.recordbuilders.AvroField;
 
 public class HanaColumnRootPK extends HanaColumnPK {
 
